@@ -11,7 +11,7 @@ Display für Solar-Balkonkraftwerk mit Pico und MQTT. Läuft auf einem [Raspberr
 ## House assistant
 
 **Auslöser - Time trigger pattern**
-```
+```yaml
 platform: time_pattern
 seconds: /10
 enabled: true
