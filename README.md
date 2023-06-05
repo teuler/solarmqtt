@@ -18,7 +18,7 @@ enabled: true
 ```
 
 **Aktion(en) - MQTT Publish**
-```
+```yaml
 service: mqtt.publish
 data:
   qos: 0
