@@ -7,6 +7,7 @@ Display für Solar-Balkonkraftwerk mit Pico und MQTT. Läuft auf einem [Raspberr
 ## Material
 - Einen [Raspberry Pi Pico W](https://www.raspberrypi.com/products/raspberry-pi-pico/), z.B. von [Reichelt](https://www.reichelt.de/de/de/raspberry-pi-pico-w-rp2040-cortex-m0-wlan-microusb-rasp-pi-pico-w-p329646.html?PROVID=2788&gclid=EAIaIQobChMIuuXRwPKs_wIVTxUGAB0hJw2sEAQYASABEgL6TPD_BwE&&r=1)
 - Ein [WaveShare 2.8" 320x240 Touch Display Module für Raspberry Pi Pico](https://www.waveshare.com/wiki/Pico-ResTouch-LCD-2.8) (262K Farben, SPI), z.B. von [Eckstein](https://eckstein-shop.de/WaveShare28inchTouchDisplayModuleforRaspberryPiPico2C262KColors2C320C3972402CSPI)
+
 <!-- Pro Wechselrichter einen [Shelly Plug S](https://www.shelly.cloud/en/products/shop/shelly-plug-s) oder einen vergleichbaren, Home Assistant-kompatiblen Zwischenstecker zur Leistungsmessung.-->
 
 ## House assistant
