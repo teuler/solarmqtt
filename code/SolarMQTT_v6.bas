@@ -26,7 +26,7 @@ Option Base 0
 Option Escape
 
 Const DEBUG       = 0
-Const USE_WDOG    = 0
+Const USE_WDOG    = 1
 Const USE_FRBUF   = 1
 Const TEST_FOD    = 0
 Const PROG_NAME$  = "SolarMQTT"
@@ -62,7 +62,7 @@ Const FNAME_WEEK$ = "solarweek.dat"
 Const N_DAYS      = 5
 Const MAX_POW_W   = 600
 Const POW_CORR    = 1.12
-Const MAX_E_KWH   = 3
+Const MAX_E_KWH   = 3.5
 
 ' Display-related constants
 Const DISPL_UPD_S = 1.0
@@ -90,9 +90,9 @@ Const FIELD_STR   = 2
 ' Global variabes
 Dim integer round = 0, nMsg = 0, nErr = 0, nReconnect = 0, nWDog = 0
 Dim float tLastMsg_s = 0, tLastDisplUpdate_s
-Dim float tMinOfDay, tPrevMinOfDay = 0
+Dim float tMinOfDay, tPrevMinOfDay = 0, en
 Dim string msg$, key$, dat$
-Dim integer t0_s, t1_s, en
+Dim integer t0_s, t1_s
 Dim integer first_of_day = TEST_FOD
 
 Dim float pow(1), pState(1), energy(1), energy_week = 0, energy_day = 0
@@ -110,6 +110,9 @@ Dim string  msg.vals$(MAX_FIELDS -1, MAX_VALUES -1)
 Dim integer msg.size(MAX_FIELDS -1)
 Dim integer msg.type(MAX_FIELDS -1)
 Dim integer msg.n = 0, msg.isProcessing = 0, msg.isNew = 0
+
+' Check CPU speed
+Print "CPU running with " +Str$(Val(MM.Info(CPUSPEED)) /1e6) +" MHz"
 
 ' Check WiFi
 Print "Checking WiFi ..."
@@ -141,7 +144,7 @@ Do
       CLS
       Backlight 0
       WatchDog Off
-      Pause 2000
+      Pause 30000
       Print ".";
       first_of_day = 1
       Continue Do
@@ -150,7 +153,7 @@ Do
     EndIf
   EndIf
 
-  If MM.Watchdog Then Inc nWDog, 1
+  nWDog = MM.Watchdog
   If USE_WDOG Then WatchDog 2000
 
   If msg.isNew Then
@@ -179,8 +182,8 @@ Do
           pow_unit$ = getValStr$(FLD_POW_U)
           pState(0) = getVal(FLD_OVPOW, 0) Or (getVal(FLD_OVHEAT, 0) << 1)
           pState(1) = getVal(FLD_OVPOW, 1) Or (getVal(FLD_OVHEAT, 1) << 1)
-          energy(0) = getVal(FLD_ENRGY, 0)
-          energy(1) = getVal(FLD_ENRGY, 1)
+          energy(0) = getVal(FLD_ENRGY, 0) *POW_CORR
+          energy(1) = getVal(FLD_ENRGY, 1) *POW_CORR
           energy_unit$ = getValStr$(FLD_ENRGY_U)
 
           ' If this is the first reading of the day, log energy collected
@@ -195,7 +198,7 @@ Do
           en = Math(Sum energy())
           energy_day = en -log.energy(log.nWeek -1)
           energy_week = en -log.first_energy
-          Print en, energy_day, energy_week
+          'Print en, energy_day, energy_week, log.energy(log.nWeek -1)
 
       End Select
       msg.isNew = 0
@@ -250,16 +253,6 @@ Sub addToWeekLog _energy(), drv$
   Local float energy
   Drive d$
   Open FNAME_WEEK$ For Random As #2
-  'If 0 Then
-  '  dat$ = "31-05-2023,  11.23"
-  '  Print #2, dat$ +String$(DAY_RECLEN -1 -Len(dat$), REC_FILL_CH) +"\n";
-  '  dat$ = "01-06-2023,  13.83"
-  '  Print #2, dat$ +String$(DAY_RECLEN -1 -Len(dat$), REC_FILL_CH) +"\n";
-  '  dat$ = "02-06-2023,  15.01"
-  '  Print #2, dat$ +String$(DAY_RECLEN -1 -Len(dat$), REC_FILL_CH) +"\n";
-  '  dat$ = "03-06-2023,  16.78"
-  '  Print #2, dat$ +String$(DAY_RECLEN -1 -Len(dat$), REC_FILL_CH) +"\n";
-  'Else
   nRec = Int(Lof(#2) /DAY_RECLEN)
   If nRec > 0 Then
     ' Read last entry to check if there is already one for today
@@ -276,7 +269,6 @@ Sub addToWeekLog _energy(), drv$
     Print "Writing '" +dat$ +"' to '" +d$ +"\\" +FNAME_WEEK$ +"' ";
     Print "(now " +Str$(Lof(#2)) +" bytes)"
   EndIf
-  'EndIf
   Close #2
 End Sub
 
@@ -317,10 +309,10 @@ Sub addToDayLog _pow(), drv$
   ' "yy:yy:yy,xxx,xxx        "
   Local dat$, d$ = Choice(Len(drv$) = 0, "A:", drv$)
   Drive d$
-  'If _pow(0) < 0.1 And _pow(1) < 0.1 Then
-  '  Print "Zero values not written to log."
-  '  Exit Sub
-  'EndIf
+  If _pow(0) < 0.1 And _pow(1) < 0.1 Then
+    Print "Zero values not written to log."
+    Exit Sub
+  EndIf
   Open FNAME_DAY$ For Random As #1
   If Lof(#1) = 0 Then
     ' File is empty, start file with today's date
@@ -401,7 +393,7 @@ Sub UpdateDisplay
   Local integer col, cbk, col1, cbk1, c1, c2, dy2=dy*2+gp, dy3, i,j, pw
   Local integer xp(2), yp(2), nw
   Local string s$, v$
-  Local float enrgy
+  Local float enrgy, dxf
 
   If USE_FRBUF Then FRAMEBUFFER Write F
 
@@ -449,9 +441,9 @@ Sub UpdateDisplay
   y = dy*4 -8
   dx = MM.HRes/5*3 +1
   dy3 = MM.VRes -y -66
-  dx2 = dx /16
-  For i=DAYHR1 To DAYHR2-1 Step 1
-    x1 = 2 +(i-DAYHR1) *dx2
+  dxf = dx /(DAYHR2 -DAYHR1)
+  For i=DAYHR1 To DAYHR2
+    x1 = Int(2 +(i-DAYHR1) *dxf)
     Line x1,y+dy3,x1,y+dy3+3,1,Choice(i Mod 4 = 0, col, cbk)
     If i Mod 4 = 0 Then
       _text x1,y+dy3+5, Str$(i)+"h",,,1,1
@@ -489,7 +481,7 @@ Sub UpdateDisplay
 
   ' Collected energy as graph (week)
   x = dx +8
-  dx = (MM.HRes -x -4*(N_DAYS -1)) /N_DAYS
+  dx = (MM.HRes -x -5*(N_DAYS -1)) /N_DAYS
   For i=0 To N_DAYS -1
     x1 = x +i*(dx+4)
     Box x1,y,dx,dy3, 1,cbk,cbk
@@ -530,7 +522,7 @@ Sub UpdateDisplay
       Case 2: s$ = "msgs" : v$ = Str$(nMsg)
       Case 3: s$ = "wdog" : v$ = Str$(nWDog)
       Case 4: s$ = "recs" : v$ = Str$(log.nDay)
-      Case 5: s$ = "kWh"  : v$ = Str$(energy_week,0,1)
+      Case 5: s$ = "kWh"  : v$ = Str$(energy_week,0,0)
     End Select
     If Len(s$) > 0 Then
       _text x2,y, s$,,C_TXT_LO,1,1
