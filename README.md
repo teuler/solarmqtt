@@ -1,7 +1,6 @@
 # solarmqtt
 
-[<img src="[https://github.com/teuler/robotling2/blob/main/pictures/GIF3.gif](https://github.com/teuler/solarmqtt/blob/main/pics/scr01.png)" alt="Drawing" width="320"/>](https://github.com/teuler/solarmqtt/blob/main/pics/scr01.png)
-
+[<img src="https://github.com/teuler/robotling2/blob/main/pictures/GIF3.gif" alt="Drawing" width="320"/>](https://github.com/teuler/solarmqtt/blob/main/pics/scr01.png)
 
 Display für Solar-Balkonkraftwerk mit Pico und MQTT. Läuft auf einem [Raspberry Pi Pico W](https://www.raspberrypi.com/products/raspberry-pi-pico/) unter [MMBasic](https://mmbasic.com/) in der [Webmite](https://geoffg.net/webmite.html)-Version. Interpretiert MQTT-Nachrichten über die erzeugte Solarenergie, hier vom in [Home Assistant](https://www.home-assistant.io/) eingebauten MQTT-Broker.
 
