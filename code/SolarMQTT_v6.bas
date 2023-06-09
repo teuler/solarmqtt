@@ -63,6 +63,8 @@ Const N_DAYS      = 5
 Const MAX_POW_W   = 600
 Const POW_CORR    = 1.12
 Const MAX_E_KWH   = 3.5
+Const ENRGY2_OFFS = 14.08 ' KWh (before last reset)
+
 
 ' Display-related constants
 Const DISPL_UPD_S = 1.0
@@ -183,7 +185,7 @@ Do
           pState(0) = getVal(FLD_OVPOW, 0) Or (getVal(FLD_OVHEAT, 0) << 1)
           pState(1) = getVal(FLD_OVPOW, 1) Or (getVal(FLD_OVHEAT, 1) << 1)
           energy(0) = getVal(FLD_ENRGY, 0) *POW_CORR
-          energy(1) = getVal(FLD_ENRGY, 1) *POW_CORR
+          energy(1) = getVal(FLD_ENRGY, 1) *POW_CORR +ENRGY2_OFFS
           energy_unit$ = getValStr$(FLD_ENRGY_U)
 
           ' If this is the first reading of the day, log energy collected
@@ -191,6 +193,8 @@ Do
           If first_of_day Then
             addToWeekLog energy()
             readWeekLog
+            Kill FNAME_DAY$
+            Print "Yesterday's file deleted."
             first_of_day = 0
           EndIf
 
@@ -198,7 +202,7 @@ Do
           en = Math(Sum energy())
           energy_day = en -log.energy(log.nWeek -1)
           energy_week = en -log.first_energy
-          'Print en, energy_day, energy_week, log.energy(log.nWeek -1)
+          Print en, energy_day, energy_week, log.energy(log.nWeek -1)
 
       End Select
       msg.isNew = 0
@@ -289,7 +293,7 @@ Sub readWeekLog drv$
   log.nWeek = 0
   For i=0 To N_DAYS-1
     If (nRec -i) > 0 Then
-      Seek #2, Lof(#2) -(nRec -i) *DAY_RECLEN +1
+      Seek #2, Lof(#2) -(N_DAYS -i) *DAY_RECLEN +1
       dat$ = Input$(DAY_RECLEN, #2)
       log.energy(i) = Val(Field$(dat$, 2, ","))
       log.wdays$(i) = Left$(Day$(Left$(dat$, 10)), 2)
@@ -342,15 +346,15 @@ Sub readDayLog drv$
   n = Lof(#1)
   log.nDay = 0
   nRec = Int(n /DAY_RECLEN)
-  If n > 0 Then
-    ' Check if the file is from today
-    Seek #1, 1
-    dat$ = Left$(Input$(Day_RECLEN, #1), 10)
-    'Print "'"+dat$+"'", "'"+Date$+"'", dat$ = Date$
-    If dat$ = Date$ Or Date$ = "01-01-2000" Then
-      ' It is today's file (or the current date has not yet been determined);
-      ' Read values ...
-      For i=2 To nRec
+  If nRec > 0 Then
+    '' Check if the file is from today
+    'Seek #1, 1
+    'dat$ = Left$(Input$(Day_RECLEN, #1), 10)
+    ''Print "'"+dat$+"'", "'"+Date$+"'", dat$ = Date$
+    'If dat$ = Date$ Or Date$ = "01-01-2000" Then
+    '  ' It is today's file (or the current date has not yet been determined);
+    '  ' Read values ...
+      For i=1 To nRec
         Seek #1, (i-1) *DAY_RECLEN +1
         dat$ = Input$(DAY_RECLEN, #1)
         log.epo(i-1) = Epoch(DAY_REF$ +" " +Left$(dat$, 8)) -DAY_EP0
@@ -359,13 +363,13 @@ Sub readDayLog drv$
         log.pow(i-1,2) = log.pow(i-1,0) +log.pow(i-1,1)
         Inc log.nDay, 1
       Next i
-    Else
-      ' It's an old file; kill it such that `addToDayLog` creates a new one
-      Close #1
-      Kill FNAME_DAY$
-      Print "Yesterday's file deleted."
-      Exit Sub
-    EndIf
+    'Else
+    '  ' It's an old file; kill it such that `addToDayLog` creates a new one
+    '  Close #1
+    '  Kill FNAME_DAY$
+    '  Print "Yesterday's file deleted."
+    '  Exit Sub
+    'EndIf
   EndIf
   Print "-> " +Str$(log.nDay) +" record(s) read."
   Close #1
