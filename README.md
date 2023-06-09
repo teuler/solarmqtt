@@ -1,21 +1,26 @@
 # solarmqtt
+
+[<img src="https://github.com/teuler/solarmqtt/blob/main/pics/scr01.png" align="right" alt="Drawing" width="320"/>](https://github.com/teuler/solarmqtt/blob/main/pics/scr01.png)
+
 Display für Solar-Balkonkraftwerk mit Pico und MQTT. Läuft auf einem [Raspberry Pi Pico W](https://www.raspberrypi.com/products/raspberry-pi-pico/) unter [MMBasic](https://mmbasic.com/) in der [Webmite](https://geoffg.net/webmite.html)-Version. Interpretiert MQTT-Nachrichten über die erzeugte Solarenergie, hier vom in [Home Assistant](https://www.home-assistant.io/) eingebauten MQTT-Broker.
 
 ## Material
-- [Raspberry Pi Pico W](https://www.raspberrypi.com/products/raspberry-pi-pico/), z.B. von [Reichelt](https://www.reichelt.de/de/de/raspberry-pi-pico-w-rp2040-cortex-m0-wlan-microusb-rasp-pi-pico-w-p329646.html?PROVID=2788&gclid=EAIaIQobChMIuuXRwPKs_wIVTxUGAB0hJw2sEAQYASABEgL6TPD_BwE&&r=1)
-- [WaveShare 2.8" 320x240 Touch Display Module für Raspberry Pi Pico](https://www.waveshare.com/wiki/Pico-ResTouch-LCD-2.8) (262K Farben, SPI), z.B. von [Eckstein](https://eckstein-shop.de/WaveShare28inchTouchDisplayModuleforRaspberryPiPico2C262KColors2C320C3972402CSPI)
+- Einen [Raspberry Pi Pico W](https://www.raspberrypi.com/products/raspberry-pi-pico/), z.B. von [Reichelt](https://www.reichelt.de/de/de/raspberry-pi-pico-w-rp2040-cortex-m0-wlan-microusb-rasp-pi-pico-w-p329646.html?PROVID=2788&gclid=EAIaIQobChMIuuXRwPKs_wIVTxUGAB0hJw2sEAQYASABEgL6TPD_BwE&&r=1)
+- Ein [WaveShare 2.8" 320x240 Touch Display Module für Raspberry Pi Pico](https://www.waveshare.com/wiki/Pico-ResTouch-LCD-2.8) (262K Farben, SPI), z.B. von [Eckstein](https://eckstein-shop.de/WaveShare28inchTouchDisplayModuleforRaspberryPiPico2C262KColors2C320C3972402CSPI)
+
+<!-- Pro Wechselrichter einen [Shelly Plug S](https://www.shelly.cloud/en/products/shop/shelly-plug-s) oder einen vergleichbaren, Home Assistant-kompatiblen Zwischenstecker zur Leistungsmessung.-->
 
 ## House assistant
 
 **Auslöser - Time trigger pattern**
-```
+```yaml
 platform: time_pattern
 seconds: /10
 enabled: true
 ```
 
 **Aktion(en) - MQTT Publish**
-```
+```yaml
 service: mqtt.publish
 data:
   qos: 0
