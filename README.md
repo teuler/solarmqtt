@@ -49,5 +49,5 @@ data:
 ```
 
 ## Hinweise
--- Die Länge einer MQTT-Nachricht ist bei MMBasic begrenzt, daher werden kurze, weniger aussagekräftige Feldnamen in der MQTT-Nachricht verwendet
+- Die Länge einer MQTT-Nachricht ist bei MMBasic begrenzt, daher werden kurze, weniger aussagekräftige Feldnamen in der MQTT-Nachricht verwendet
 
