@@ -28,22 +28,26 @@ data:
   retain: false
   topic: solar/panels
   payload: >-
-    name:  
-    [o,u]; 
-    pw:
+    name: [o,u];  pw:
     [{{states.sensor.shellyplug2_solar_1_power.state}},
      {{states.sensor.shellyplug2_solar_2_power.state}}];
-    pw-unit:
-    {{states.sensor.shellyplug2_solar_1_power.attributes.unit_of_measurement}};
-    en: 
-    [{{states.sensor.shellyplug2_solar_1_energy.state | round(3)}},
-     {{states.sensor.shellyplug2_solar_2_energy.state | round(3)}}];
-    en-unit:
-    {{states.sensor.shellyplug2_solar_1_energy.attributes.unit_of_measurement}};
-    overpw: 
+    pw-u:
+    [{{states.sensor.shellyplug2_solar_1_power.attributes.unit_of_measurement}},
+     {{states.sensor.shellyplug2_solar_2_power.attributes.unit_of_measurement}}];
+    en:
+    [{{states.sensor.shellyplug2_solar_1_energy.state | round(1)}},
+     {{states.sensor.shellyplug2_solar_2_energy.state | round(1)}}];
+    en-u:
+    [{{states.sensor.shellyplug2_solar_1_energy.attributes.unit_of_measurement}},
+     {{states.sensor.shellyplug2_solar_2_energy.attributes.unit_of_measurement}}];
+    opw:
     [{{ int(is_state("binary_sensor.shellyplug2_solar_1_overpowering", "on")) }},
-     {{ int(is_state("binary_sensor.shellyplug2_solar_2_overpowering", "on")) }}]; 
-    overht: 
-    [{{int(is_state("binary_sensor.shellyplug2_solar_1_overheating", "on")) }},
-     {{int(is_state("binary_sensor.shellyplug2_solar_2_overheating", "on")) }}];
+     {{ int(is_state("binary_sensor.shellyplug2_solar_2_overpowering","on")) }}]; 
+    oht:
+    [{{ int(is_state("binary_sensor.shellyplug2_solar_1_overheating", "on")) }},
+     {{ int(is_state("binary_sensor.shellyplug2_solar_2_overheating", "on")) }}];
 ```
+
+## Hinweise
+-- Die Länge einer MQTT-Nachricht ist bei MMBasic begrenzt, daher werden kurze, weniger aussagekräftige Feldnamen in der MQTT-Nachricht verwendet
+
