@@ -1,0 +1,3 @@
+- `SolarMQTT_v11.bas` - latest version of the MMBASIC program
+- `SETTINGS.txt` - MMBASIC options used by the program
+- `weekFile.bas` - helper file to create a valid `solardweek.dat` file
