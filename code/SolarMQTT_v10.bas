@@ -1,4 +1,4 @@
-' "SolarMQTT_v9.bas"
+' "SolarMQTT_v10.bas"
 ' The MIT Licence (MIT)
 ' Copyright (c) 2023 Thomas Euler
 '
@@ -20,24 +20,25 @@
 '   OPTION TOUCH GP16,GP17
 '   GUI CALIBRATE xxx
 '
-' 2023-04-30 - v0.1, Initial release
-' 2023-08-12 - v1.8, Some small fixes
+' 2023-04-30 - v0.01, Initial release
+' 2023-08-12 - v1.08, Some small fixes
+' 2023-09-02 - v1.10, Consider units in MQTT messages
 '
 ' To grab the program:
-'   tftp 192.168.178.73 get "SolarMQTT_v8.bas"
+'   tftp 192.168.178.73 get "SolarMQTT_v10.bas"
 ' ----------------------------------------------------------------------------
 Option Explicit
 Option Base 0
 Option Escape
-Option Autorun 1
+'Option Autorun 1
 
 Const DEBUG       = 0
-Const USE_WDOG    = 1
+Const USE_WDOG    = 0
 Const USE_FRBUF   = 1
 Const TEST_FOD    = 0
 Const RECORD_PICS = 1
 Const PROG_NAME$  = "SolarMQTT"
-Const PROG_VER    = 1.8
+Const PROG_VER    = 1.10
 
 ' MQTT brocker, topic etc.
 Const MQTT_ADDR$  = "192.168.178.20"
@@ -46,12 +47,12 @@ Const MQTT_USER$  = "picomite"
 Const MQTT_PW$    = "jumble5645rest"
 Const MQTT_TOUT_S = 15.0
 Const TOP_SOL_PAN = "solar/panels"
-Const FLD_POW     = "pw"
-Const FLD_POW_U   = "pw-unit"
-Const FLD_ENRGY   = "en"
-Const FLD_ENRGY_U = "en-unit"
-Const FLD_OVPOW   = "overpw"
-Const FLD_OVHEAT  = "overht"
+Const FLD_POW     = "pw"   ' power
+Const FLD_POW_U   = "pw-u" ' power unit
+Const FLD_ENRGY   = "en"   ' energy
+Const FLD_ENRGY_U = "en-u" ' energy unit
+Const FLD_OVPOW   = "opw"  ' over-power (Shelly plug)
+Const FLD_OVHEAT  = "oht"  ' over-heat (Shelly plug)
 
 ' Log file-related
 Const FNAME_DAY$  = "solarday.dat"
@@ -73,7 +74,7 @@ Const MAX_E_KWH   = 3.5
 Const ENRGY2_OFFS = 0 ' KWh (before last reset)
 Const ENRGY1_OFFS = 0
 Const FNAME_PIC$  = "B:/pic%05.0g.bmp"
-Const SDCARD_OK   = MM.Info(SDCARD) = "READY"
+Const SDCARD_OK   = MM.Info(SDCARD) = "Ready"
 
 ' Display-related constants
 Const DISPL_UPD_S = 1.0
@@ -98,14 +99,14 @@ Const MAX_VALUES  = 2
 Const FIELD_NUM   = 1
 Const FIELD_STR   = 2
 
-' Global variabes
+' Global variables
 Dim integer round = 0, nMsg = 0, nErr = 0, nReconnect = 0, nWDog = 0
 Dim float tLastMsg_s = 0, tLastDisplUpdate_s
 Dim float tMinOfDay, tPrevMinOfDay = 0, en
-Dim string msg$, key$, dat$, fn$
+Dim string msg$, key$, dat$, fn$, s0$, s1$
 Dim integer t0_s, t1_s
 Dim integer first_of_day = TEST_FOD
-Dim integer iPic = 0
+Dim integer iPic = 0, j
 
 Dim float pow(1), pState(1), energy(1), energy_week = 0, energy_day = 0
 Dim string pow_unit$, energy_unit$
@@ -160,22 +161,19 @@ Do
       CLS
       Option Heartbeat Off
       Backlight 0
-      'WatchDog Off
-      WatchDog HW Off
+      WatchDog Off
       Pause 30000
       Print ".";
       first_of_day = 1
       Continue Do
     Else
       Backlight 100
-      Option Heartbeat Off
+      Option Heartbeat On
     EndIf
   EndIf
 
-  'nWDog = MM.Watchdog
-  'If USE_WDOG Then WatchDog 2000
   nWDog = MM.Info(BOOT COUNT)
-  If USE_WDOG Then WatchDog HW 2000
+  If USE_WDOG Then WatchDog 20000
 
   If msg.isNew Then
     ' Parse message and indicate that a new one is ready
@@ -197,17 +195,33 @@ Do
       ' Extract data ...
       Select Case msg.topic$
         Case TOP_SOL_PAN
-          ' Solar panels (power etc ...)
+          ' Solar panels
+          ' Current power reading ...
           pow(0) = getVal(FLD_POW, 0) *POW_CORR
           pow(1) = getVal(FLD_POW, 1) *POW_CORR
-          pow_unit$ = getValStr$(FLD_POW_U)
+          s0$ = getValStr$(FLD_POW_U, 0)
+          s1$ = getValStr$(FLD_POW_U, 1)
+          If s0$ <> s1$ Then
+            ' Units for current power differs; should not happen
+            ' TODO: Handle this possibility
+            Print "WARNING: Power units different (";s0$;" vs. ";s1$;")"
+          EndIf
+          pow_unit$ = s0$
+
+          ' Status of Shelly Plugs (overheating etc.)
           pState(0) = getVal(FLD_OVPOW, 0) Or (getVal(FLD_OVHEAT, 0) << 1)
           pState(1) = getVal(FLD_OVPOW, 1) Or (getVal(FLD_OVHEAT, 1) << 1)
+
+          ' Energy collected so far, considering also the unit
           energy(0) = getVal(FLD_ENRGY, 0) *POW_CORR +ENRGY1_OFFS
           energy(1) = getVal(FLD_ENRGY, 1) *POW_CORR +ENRGY2_OFFS
-          energy_unit$ = getValStr$(FLD_ENRGY_U)
+          For j=0 To 1
+            s0$ = UCase$(getValStr$(FLD_ENRGY_U, j))
+            energy(j) = energy(j) * Choice(Left$(s0$, 1) = "M", 1000, 1)
+          Next j
+          energy_unit$ = "kWh"
 
-          ' If this is the first reading of the day, log energy collected
+         ' If this is the first reading of the day, log energy collected
           ' so far (=level from the morning)
           If first_of_day Then
             addToWeekLog energy()
@@ -443,7 +457,7 @@ Sub UpdateDisplay
   _text x,y+dy, "[" +pow_unit$ +"]",col,cbk,4
   _text x,y+dy*2, "total",col,cbk,4
   s$ = Str$(pow(0) +pow(1), 3, 0)
-  _text x1,y, s$,col,cbk,6
+  _text x1,y-1, s$,col,cbk,6
 
   ' Solar power state (overpower, overheating; Shelly!!)
   Inc x, dx+4
@@ -553,7 +567,7 @@ Sub UpdateDisplay
       Case 0: s$ = "error": v$ = Str$(nErr)
       Case 1: s$ = "cnnct": v$ = Str$(nReconnect)
       Case 2: s$ = "msgs" : v$ = Str$(nMsg)
-      Case 3: s$ = "wdog" : v$ = Str$(nWDog)
+      Case 3: s$ = "rboot": v$ = Str$(nWDog)
       Case 4: s$ = "recs" : v$ = Str$(log.nDay)
       Case 5: s$ = "kWh"  : v$ = Str$(energy_week,0,0)
     End Select
