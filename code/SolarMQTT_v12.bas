@@ -21,8 +21,7 @@
 ' 2023-04-30 - v0.01, Initial release
 ' 2023-08-12 - v1.08, Some small fixes
 ' 2023-09-02 - v1.10, Consider units in MQTT messages
-' 2023-09-13 - v1.11, Save .dat files to B:, if present, to recover if flash
-'                     gets corrupted and firmware needs to be re-installed
+' 2023-09-13 - v1.11, Some small bug fixes
 '
 ' To grab the program:
 '   tftp 192.168.178.73 get "SolarMQTT_v12.bas"
@@ -72,7 +71,7 @@ Const FNAME_WEEK$ = "solarweek.dat"
 Const N_DAYS      = 5
 Const MAX_POW_W   = 600
 Const POW_CORR    = 1.12
-Const MAX_E_KWH   = 4.0
+Const MAX_E_KWH   = 4.5
 Const ENRGY2_OFFS = 0 ' KWh (before last reset)
 Const ENRGY1_OFFS = 0
 Const FNAME_PIC$  = "B:/pic%05.0g.bmp"
@@ -383,7 +382,7 @@ End Sub
 
 Sub readDayLog drv$
   ' Read solar day log file
-  Local string d$ = Choice(Len(drv$) = 0, "A:", drv$), dat$
+  Local string d$ = Choice(Len(drv$) = 0, "A:", drv$), dat$, s$
   Local integer n, nRec, i, ep1
   Drive d$
   Print "Reading solar day log file ..."
@@ -403,10 +402,15 @@ Sub readDayLog drv$
         Seek #1, i *DAY_RECLEN +1
         dat$ = Input$(DAY_RECLEN, #1)
         'Print i,DAY_REF$ +" " +Left$(dat$, 8)
-        log.epo(i-1) = Epoch(DAY_REF$ +" " +Left$(dat$, 8)) -DAY_EP0
-        log.pow(i-1,0) = Val(Field$(dat$, 2, ","))
-        log.pow(i-1,1) = Val(Field$(dat$, 3, ","))
-        log.pow(i-1,2) = log.pow(i-1,0) +log.pow(i-1,1)
+        'log.epo(i-1) = Epoch(DAY_REF$ +" " +Left$(dat$, 8)) -DAY_EP0
+        log.epo(i-1) = 0
+        s$ = DAY_REF$ +" " +Left$(dat$, 8)
+        If Len(s$) = 18 Then
+          log.epo(i-1) = Epoch(s$) -DAY_EP0
+          log.pow(i-1,0) = Val(Field$(dat$, 2, ","))
+          log.pow(i-1,1) = Val(Field$(dat$, 3, ","))
+          log.pow(i-1,2) = log.pow(i-1,0) +log.pow(i-1,1)
+        EndIf
         Inc log.nDay, 1
       Next i
     'Else
@@ -800,4 +804,4 @@ Function Trim$(s$, ch$)
   Loop
 End Function
 
-' ----------------------------------------------------------------------------                                                                                                                              
+' ----------------------------------------------------------------------------                                                                 
